@@ -2,54 +2,64 @@ package com.example.thermo_kotlin
 
 import android.content.Context
 import android.graphics.Canvas
+import android.graphics.Color
 import android.graphics.Paint
 import android.view.View
 
-class Thermometre(context: Context, private var temperature: Float = 0.0F) : View(context) {
+class Thermometre(context: Context, private var temp: Float = 0.0F) : View(context) {
 
-    private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        style = Paint.Style.FILL
+    private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.BLACK
+        // Increase the text size for the numbers
+        textSize = width / 12f * 1.2f
+    }
+    private val linePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.BLACK
     }
 
     fun updateTemperature(newTemperature: Float) {
-        temperature = newTemperature
+        temp = newTemperature.coerceIn(0f, 100f)
         invalidate()
     }
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
 
-        val radius = width / 10f
+        // Dimensions and adjustments based on the view's width
+        val radius = width / 12f
         val strokeWidth = width / 50f
-        val margin = radius + strokeWidth
+        val margin = radius * 2
+        textPaint.textSize = radius * 1.2f
+        linePaint.strokeWidth = strokeWidth / 2
 
-        // Set paint stroke width here
-        paint.strokeWidth = strokeWidth
+        // Normalize temperature and adjust paint properties
+        val tempRatio = temp / 100
+        adjustPaintForTemperature(tempRatio)
 
-        // Adjust paint properties based on temperature
-        adjustPaintForTemperature(temperature)
-
-        // Calculate positions based on temperature
-        val tempRatio = (temperature.coerceIn(-20F, 40F) + 20) / 60
-        val yStart = (1 - tempRatio) * (height - margin) + margin
-        val yEnd = height - margin
+        // Calculate positions
+        val yStart = (height - margin) * (1 - tempRatio) + margin / 2
+        val yEnd = height - margin / 2
         val centerX = width / 2f
 
-        // Draw the thermometer line and bottom circle
+        // Draw the thermometer's mercury line and bulb
         canvas.drawLine(centerX, yStart, centerX, yEnd, paint)
         canvas.drawCircle(centerX, yEnd, radius, paint)
+
+        // Draw side markings and numbers
+        for (i in 0..10) {
+            val yMark = (height - margin) * (1 - i / 10f) + margin / 2
+            canvas.drawLine(centerX - radius * 1.5f, yMark, centerX - radius * 2.5f, yMark, linePaint)
+            canvas.drawLine(centerX + radius * 1.5f, yMark, centerX + radius * 2.5f, yMark, linePaint)
+            canvas.drawText("${i * 10}", centerX - radius * 5f, yMark + radius / 4, textPaint)
+        }
     }
 
-    private fun adjustPaintForTemperature(temp: Float) {
-        val tempNormalized = temp.coerceIn(-20F, 40F)
-        val tempRatio = (tempNormalized + 20) / 60
-        paint.color = calculateColorForTemperature(tempRatio)
-    }
-
-    private fun calculateColorForTemperature(tempRatio: Float): Int {
+    private fun adjustPaintForTemperature(tempRatio: Float) {
         val red = (255 * tempRatio).toInt()
         val blue = 255 - red
         val green = (128 - kotlin.math.abs(tempRatio - 0.5) * 256).toInt()
-        return android.graphics.Color.rgb(red, green, blue)
+        paint.color = Color.rgb(red, green, blue)
+        paint.strokeWidth = width / 50f
     }
 }
